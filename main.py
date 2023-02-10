@@ -7,22 +7,34 @@ asyncio.set_event_loop(asyncio.new_event_loop())
 eventloop = asyncio.get_event_loop()
 
 # TODO:
-# dummy proof the inputs
-# path has to be a string
-# synch_interval needs to be a positive number
-# log_path has to be a string
-
+#   Make folders become backups
 
 def user_input():
-    path_user_selected = input("Enter the Folder path: \n")
-    log_directory = input("Enter the Log file path: \n")
-    synch_interval = input("Enter the synchronization interval in MINUTES: \n")
+    while True:
+        path_user_selected = input("Enter the Folder path: \n")
+        if os.path.exists(path_user_selected):
+            break
+        print("Invalid path. Provide a valid path.")
+    while True:
+        log_directory = input("Enter the Log file path: \n")
+        if os.path.exists(log_directory):
+            break
+        print("Invalid path. Provide a valid path.")
+    while True:
+        try:
+            synch_interval = int(input("Enter the synchronization interval in MINUTES: \n"))
+            if synch_interval <= 0:
+                print("Please insert a valid interval.")
+            else:
+                break
+        except ValueError:
+            print("Please insert a valid interval.")
 
     if path_user_selected == log_directory:
-        eventloop.create_task(sync(int(synch_interval)*60, path_user_selected,
-                                   get_folder_name(path_user_selected)))
+        eventloop.create_task(sync(synch_interval * 60, path_user_selected,
+                                   os.path.dirname(path_user_selected)))
     else:
-        eventloop.create_task(sync(int(synch_interval)*60, path_user_selected, log_directory))
+        eventloop.create_task(sync(synch_interval * 60, path_user_selected, log_directory))
     eventloop.run_forever()
 
 
