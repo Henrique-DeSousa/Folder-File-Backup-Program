@@ -44,26 +44,26 @@ async def sync(delay, path_user_selected, log_directory):
         await asyncio.sleep(delay)
 
 
-def get_folder_name(path_user, before=True):  # P:\Projects\Python\Folder_Backupper\folder_test
+def get_folder_name(path_user, before=True):
     last_occurrence = path_user.rfind("\\")  # finds the index of the last occurrence of the backslash
     if last_occurrence != -1:  # if no \ is found, rfind returns -1
         return path_user[last_occurrence + 1:]  # copies everything after the backslash
 
 
-def create_backup_folder(path):  # P:\Projects\Python\Folder_Backupper\folder_test
+def create_backup_folder(path):
     folder_name = get_folder_name(path)
     directory = os.path.dirname(path)
     path_backup = os.path.join(directory, folder_name + "_backup")
 
-    if not os.path.isdir(path_backup):  # P:\Projects\Python\Folder_Backupper\folder_test_backup
+    if not os.path.isdir(path_backup):
         shutil.copytree(path, path_backup)  # creates a folder as original_backup. In the directory of the original
         return path_backup
     return path_backup
 
 
-def file_verification(path, log_path):  # P:\Projects\Python\Folder_Backupper\folder_test
+def file_verification(path, log_path):
     buffer_size = bytearray(131072) #128KB buffer
-    backup_folder = create_backup_folder(path)  # P:\Projects\Python\Folder_Backupper\folder_test_backup
+    backup_folder = create_backup_folder(path)
     log = []
 
     hash_original = set(os.listdir(path))
