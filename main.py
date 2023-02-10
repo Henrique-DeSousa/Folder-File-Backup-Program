@@ -7,7 +7,9 @@ asyncio.set_event_loop(asyncio.new_event_loop())
 eventloop = asyncio.get_event_loop()
 
 # TODO:
-#   Make folders become backups
+#   Make existing folders sync.
+#   Delete folders that no longer exist in original
+#   Add folders to backup
 
 def user_input():
     while True:
@@ -115,14 +117,15 @@ def remove_files(files, folder_target):
         os.remove(file_path)
 
 
-def generate_log(log, log_path):
-    if os.path.isfile(log_path + "/log.txt"):
-        with open(log_path + "/log.txt", "a+") as lg:
-            lg.write(str(log)+"\n")
-    else:
-        with open(log_path + "/log.txt", "w+") as lg:
-            lg.write(str(log)+"\n")
-    print(f"Finished writing log.{log}")
+def log_setup(log_path):
+    log_format = '%(asctime)s %(message)s'
+    logging.basicConfig(filename=log_path + "/Log.log", encoding='utf-8', level=logging.INFO,
+                        format=log_format, datefmt='%Y-%m-%d %H:%M:%S')
+
+
+def log_write(log):
+    logging.info(log)
+    print(log)
 
 
 user_input()
