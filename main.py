@@ -44,7 +44,7 @@ async def sync(delay, path_user_selected, log_directory):
         await asyncio.sleep(delay)
 
 
-def get_folder_name(path_user, before=True):
+def get_folder_name(path_user):
     last_occurrence = path_user.rfind("\\")  # finds the index of the last occurrence of the backslash
     if last_occurrence != -1:  # if no \ is found, rfind returns -1
         return path_user[last_occurrence + 1:]  # copies everything after the backslash
@@ -62,7 +62,7 @@ def create_backup_folder(path):
 
 
 def file_verification(path, log_path):
-    buffer_size = bytearray(131072) #128KB buffer
+    buffer_size = 131072 #128KB buffer
     backup_folder = create_backup_folder(path)
     log = []
 
@@ -84,7 +84,7 @@ def file_verification(path, log_path):
     for file in common_files:
         file1 = os.path.join(path, file)
         file2 = os.path.join(backup_folder, file)
-        with open(file1, "rb") as f1, open(file2, "rb") as f2:
+        with open(file1, "rb+") as f1, open(file2, "rb+") as f2:
             hash_file1 = hashlib.md5(f1.read(buffer_size)).hexdigest()
             hash_file2 = hashlib.md5(f2.read(buffer_size)).hexdigest()
             if hash_file1 != hash_file2:
@@ -116,13 +116,13 @@ def remove_files(files, folder_target):
 
 
 def generate_log(log, log_path):
-    if os.path.isfile(log_path+"\\"+"log.txt"):
-        with open(log_path+"\\"+"log.txt", "a") as lg:
+    if os.path.isfile(log_path + "/log.txt"):
+        with open(log_path + "/log.txt", "a+") as lg:
             lg.write(str(log)+"\n")
     else:
-        with open(log_path+"\\"+"log.txt", "w") as lg:
+        with open(log_path + "/log.txt", "w+") as lg:
             lg.write(str(log)+"\n")
-    print("Finished writing log." + log)
+    print(f"Finished writing log.{log}")
 
 
 user_input()
