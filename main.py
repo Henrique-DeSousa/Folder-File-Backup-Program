@@ -1,15 +1,12 @@
+import asyncio
 import hashlib
+import logging
 import os
 import shutil
-import asyncio
 
 asyncio.set_event_loop(asyncio.new_event_loop())
 eventloop = asyncio.get_event_loop()
 
-# TODO:
-#   Make existing folders sync.
-#   Delete folders that no longer exist in original
-#   Add folders to backup
 
 def user_input():
     while True:
@@ -31,25 +28,16 @@ def user_input():
                 break
         except ValueError:
             print("Please insert a valid interval.")
-
+    minutes = synch_interval * 3
     if path_user_selected == log_directory:
-        eventloop.create_task(sync(synch_interval * 60, path_user_selected,
-                                   os.path.dirname(path_user_selected)))
+        backup_folder_path = create_backup_folder(path_user_selected)
+        log_setup(os.path.dirname(path_user_selected))
+        eventloop.create_task(sync(minutes, path_user_selected, backup_folder_path))
     else:
-        eventloop.create_task(sync(synch_interval * 60, path_user_selected, log_directory))
+        backup_folder_path = create_backup_folder(path_user_selected)
+        log_setup(log_directory)
+        eventloop.create_task(sync(minutes, path_user_selected, backup_folder_path))
     eventloop.run_forever()
-
-
-async def sync(delay, path_user_selected, log_directory):
-    while eventloop.is_running():
-        file_verification(path_user_selected, log_directory)
-        await asyncio.sleep(delay)
-
-
-def get_folder_name(path_user):
-    last_occurrence = path_user.rfind("\\")  # finds the index of the last occurrence of the backslash
-    if last_occurrence != -1:  # if no \ is found, rfind returns -1
-        return path_user[last_occurrence + 1:]  # copies everything after the backslash
 
 
 def create_backup_folder(path):
@@ -63,58 +51,71 @@ def create_backup_folder(path):
     return path_backup
 
 
-def file_verification(path, log_path):
-    buffer_size = 131072 #128KB buffer
-    backup_folder = create_backup_folder(path)
-    log = []
-
-    hash_original = set(os.listdir(path))
-    hash_backup = set(os.listdir(backup_folder))
-
-    added_files = hash_original - hash_backup
-    if added_files:
-        log.append(("Copied Files: ", added_files))
-        add_files(added_files, path, backup_folder)
-
-    deleted_files = hash_backup - hash_original
-    if deleted_files:
-        log.append(("Deleted Files: ", deleted_files))
-        remove_files(deleted_files, backup_folder)
-
-    common_files = hash_original & hash_backup
-    files_unsync = set()
-    for file in common_files:
-        file1 = os.path.join(path, file)
-        file2 = os.path.join(backup_folder, file)
-        with open(file1, "rb+") as f1, open(file2, "rb+") as f2:
-            hash_file1 = hashlib.md5(f1.read(buffer_size)).hexdigest()
-            hash_file2 = hashlib.md5(f2.read(buffer_size)).hexdigest()
-            if hash_file1 != hash_file2:
-                log.append(("Modified Files: ", file))
-                files_unsync.add(file)
-    sync_files(files_unsync, path, backup_folder)
-    log.append(("Common Files: ", common_files))
-
-    generate_log(log, log_path)
+async def sync(delay, path_user_selected, backup_folder):
+    while eventloop.is_running():
+        compare_folders(path_user_selected, backup_folder)
+        await asyncio.sleep(delay)
 
 
-def add_files(files, original_folder, folder_target):
-    for file_name in files:
-        shutil.copyfile(original_folder+"\\"+file_name, folder_target+"\\"+file_name)
+def get_folder_name(path_user):  # P:\Projects\Python\Folder_Backupper\folder_test
+    last_occurrence = path_user.rfind("\\")  # finds the index of the last occurrence of the backslash
+    if last_occurrence != -1:  # if no \ is found, rfind returns -1
+        return path_user[last_occurrence + 1:]  # copies everything after the backslash
 
 
-def sync_files(files, original_folder, folder_target):
-    for file in files:
-        if os.path.isfile(folder_target+"\\"+file):
-            with open(original_folder+"\\"+file, "r") as src:
-                with open(folder_target+"\\"+file, "w") as dst:
-                    dst.write(src.read())
+def compare_folders(user_path_defined, backup_path_defined):
+    deleted_data = []
+    for data in os.listdir(user_path_defined):  # lists all the contents inside source
+        path_source = os.path.join(user_path_defined, data)  # gets the path of the file or folder and joins with source
+        path_backup = os.path.join(backup_path_defined, data)  # gets the path of the file or folder with backup
+        if os.path.isdir(path_source):  # checks if the path_source is a directory
+            if not os.path.isdir(path_backup):  # if it is but not in the backup
+                sync_data(user_path_defined, backup_path_defined)  # calls the sync_data func to add the folder
+            else:
+                compare_folders(path_source, path_backup)  # if it's a folder, just reiterates
+        else:
+            if not os.path.isfile(path_backup):  # if's it's a file and not in backup
+                sync_data(user_path_defined, backup_path_defined)  # creates the file in the backup with sync_data
+    for data in os.listdir(backup_path_defined):  # iterates over the backup directories
+        path_source = os.path.join(user_path_defined, data)  # generates paths
+        path_backup = os.path.join(backup_path_defined, data)  # generates paths
+        if not os.path.exists(path_source):  # if the path doesn't exist in the source folder
+            deleted_data.append(path_backup)  # appends to a deleted_data due to deleting several things at once
+            remove_data(deleted_data)  # calls remove_data function with the deleted_data
+    sync_data(user_path_defined, backup_path_defined)  # called to check if any modifications where made
 
 
-def remove_files(files, folder_target):
-    for file in files:
-        file_path = os.path.join(folder_target, file)
-        os.remove(file_path)
+def sync_data(target_path, path_backup):
+    buffer_size = 131072  # 128KB buffer
+    if not os.path.exists(path_backup):
+        os.makedirs(path_backup)  # creates the directories needed to accommodate the folder.
+        log_write(f"Created Folder: {os.path.basename(path_backup)}")
+    for files in os.listdir(target_path):
+        source_folder = os.path.join(target_path, files)
+        destination_folder = os.path.join(path_backup, files)
+        if os.path.isdir(source_folder):
+            sync_data(source_folder, destination_folder)
+        else:
+            if not os.path.exists(destination_folder):
+                shutil.copy(source_folder, destination_folder)
+                log_write(f"Created File: {os.path.basename(destination_folder)}")
+            else:
+                with open(source_folder, "rb+") as f1, open(destination_folder, "rb+") as f2:  # opens files with read bytes
+                    hash_source_file = hashlib.md5(f1.read(buffer_size)).hexdigest()  # generates the hash md5 of the file
+                    hash_backup_file = hashlib.md5(f2.read(buffer_size)).hexdigest()
+                    if hash_source_file != hash_backup_file:  # compares both hashes and checks if there's a change
+                        shutil.copy2(source_folder, destination_folder)  # copies the changes
+                        log_write(f"Modified File: {files} in {destination_folder}")  # writes to the log file the changes
+
+
+def remove_data(removed_data):
+    for data in removed_data:
+        if os.path.isdir(data):
+            shutil.rmtree(data)
+            log_write(f"Delete Folder: {data}")
+        elif os.path.isfile(data):
+            os.remove(data)
+            log_write(f"Delete File: {data}")
 
 
 def log_setup(log_path):
