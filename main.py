@@ -28,7 +28,7 @@ def user_input():
                 break
         except ValueError:
             print("Please insert a valid interval.")
-    minutes = synch_interval * 3
+    minutes = synch_interval * 60
     if path_user_selected == log_directory:
         backup_folder_path = create_backup_folder(path_user_selected)
         log_setup(os.path.dirname(path_user_selected))
@@ -57,7 +57,7 @@ async def sync(delay, path_user_selected, backup_folder):
         await asyncio.sleep(delay)
 
 
-def get_folder_name(path_user):  # P:\Projects\Python\Folder_Backupper\folder_test
+def get_folder_name(path_user):
     last_occurrence = path_user.rfind("\\")  # finds the index of the last occurrence of the backslash
     if last_occurrence != -1:  # if no \ is found, rfind returns -1
         return path_user[last_occurrence + 1:]  # copies everything after the backslash
@@ -94,7 +94,7 @@ def sync_data(target_path, path_backup):
         source_folder = os.path.join(target_path, files)
         destination_folder = os.path.join(path_backup, files)
         if os.path.isdir(source_folder):
-            sync_data(source_folder, destination_folder)
+            sync_data(source_folder, destination_folder) # if it's a folder just reiterates
         else:
             if not os.path.exists(destination_folder):
                 shutil.copy(source_folder, destination_folder)
