@@ -112,10 +112,10 @@ def remove_data(removed_data):
     for data in removed_data:
         if os.path.isdir(data):
             shutil.rmtree(data)
-            log_write(f"Delete Folder: {data}")
+            log_write(f"Deleted Folder: {data}")
         elif os.path.isfile(data):
             os.remove(data)
-            log_write(f"Delete File: {data}")
+            log_write(f"Deleted File: {data}")
 
 
 def log_setup(log_path):
