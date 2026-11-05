@@ -10,8 +10,8 @@ eventloop = asyncio.get_event_loop()
 
 def user_input():
     while True:
-        path_user_selected = input("Enter the Folder path: \n")
-        if os.path.exists(path_user_selected):
+        userFolder = input("Enter the Folder path: \n")
+        if os.path.exists(userFolder):
             break
         print("Invalid path. Provide a valid path.")
     while True:
@@ -19,6 +19,7 @@ def user_input():
         if os.path.exists(log_directory):
             break
         print("Invalid path. Provide a valid path.")
+
     while True:
         try:
             synch_interval = int(input("Enter the synchronization interval in MINUTES: \n"))
@@ -29,14 +30,15 @@ def user_input():
         except ValueError:
             print("Please insert a valid interval.")
     minutes = synch_interval * 60
-    if path_user_selected == log_directory:
-        backup_folder_path = create_backup_folder(path_user_selected)
-        log_setup(os.path.dirname(path_user_selected))
-        eventloop.create_task(sync(minutes, path_user_selected, backup_folder_path))
+
+    if userFolder == log_directory:
+        backup_folder_path = create_backup_folder(userFolder)
+        log_setup(os.path.dirname(userFolder))
+        eventloop.create_task(sync(minutes, userFolder, backup_folder_path))
     else:
-        backup_folder_path = create_backup_folder(path_user_selected)
+        backup_folder_path = create_backup_folder(userFolder)
         log_setup(log_directory)
-        eventloop.create_task(sync(minutes, path_user_selected, backup_folder_path))
+        eventloop.create_task(sync(minutes, userFolder, backup_folder_path))
     eventloop.run_forever()
 
 
@@ -51,9 +53,9 @@ def create_backup_folder(path):
     return path_backup
 
 
-async def sync(delay, path_user_selected, backup_folder):
+async def sync(delay, userFolder, backup_folder):
     while eventloop.is_running():
-        compare_folders(path_user_selected, backup_folder)
+        compare_folders(userFolder, backup_folder)
         await asyncio.sleep(delay)
 
 
